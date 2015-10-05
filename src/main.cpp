@@ -3,6 +3,7 @@
 #include <seqan/sequence.h>  // CharString, ...
 #include <seqan/stream.h>    // to stream a CharString into cout
 #include <seqan/seq_io.h>
+#include <algorithm>
 
 #define AMINO_SIZE 20
 
@@ -29,6 +30,13 @@ void print_stationary_prob(std::vector<double> * vec)
       std::cout << *it << '\t';
     }
   std::cout << std::endl;
+}
+
+int find_character_index(const char * arr, size_t size, char c)
+{
+  const char* end = arr + size;
+  const char* match = std::find(arr, end, c);
+  return (end == match)? -1 : (match-arr);
 }
 
 void load_matrix_amino(std::istream* is,
@@ -123,9 +131,54 @@ int main(int, char const **)
       return 1;
     }
 
+  // Character order in transition matrix and statinary probabillity
+  const char * amino_acid_sequence = {"IVLFCMAGTWSYPHEQDNKR"};
+
+  
+  
+  /* Likelihood computation */
+  // parameters
+  int idx_curr = 0;
+  int idx_prev = 0;
+  char current_char;
+  char previous_char;
+  std::vector< std::vector<double> > probs;
+  double prob;
+  
+  std::cout << "Length ids: " << length(ids) << '\n';
+  std::cout << "Length ids2: " << length(ids[0]) << '\n';
+  
+  for (int i = 0; i < length(seqs); i++)
+    {
+      std::cout << i << '\n';
+      // first value
+      probs.push_back(std::vector<double>());
+
+      current_char = seqs[i][0];
+      idx_curr = find_character_index(amino_acid_sequence, 
+				      sizeof(char)*AMINO_SIZE, current_char);
+
+      prob = stationary_prob.at(idx_curr);
+      probs[i].push_back(prob);
+
+      // all other values
+  
+      for (int j = 1; j < length(seqs[i]); j++)
+	{
+	  previous_char = current_char;
+	  idx_prev = idx_curr;
+	  current_char = seqs[i][j];
+	  idx_curr = find_character_index(amino_acid_sequence, 
+					  sizeof(char)*AMINO_SIZE, current_char);
+	  prob = transition_matrix[i][j];
+	  probs[i].push_back(prob);
+	}
+  
+    }
+
   for (int i = 0; i < 34; i++)
     {
-      std::cout << ids[i] << '\t' << seqs[i] << '\n';
+      //std::cout << ids[i] << '\t' << seqs[i] << '\n';
     }
   
 
