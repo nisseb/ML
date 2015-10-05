@@ -1,0 +1,32 @@
+
+#include <iostream>
+#include <seqan/sequence.h>  // CharString, ...
+#include <seqan/stream.h>    // to stream a CharString into cout
+#include <seqan/seq_io.h>
+
+using namespace seqan;
+
+int main(int, char const **)
+{
+    std::cout << "Hello World!" << std::endl;
+    seqan::CharString mySeqAnString = "Hello SeqAn!";
+    std::cout << mySeqAnString << std::endl;
+
+    CharString id;
+    Dna5String seq;
+    String<AminoAcid> amn = "AAA";
+
+    SeqFileIn seqFileIn("../COG/COG160.test.T1.fasta");
+    std::cout << "test" << '\n';
+    readRecord(id, amn, seqFileIn);
+    std::cout << id << '\t' << seq << '\n';
+
+    int i = 0;
+    while (i < length(amn))
+    {
+      std::cout << amn[i];
+      ++i;
+    }
+
+    return 1;
+}
