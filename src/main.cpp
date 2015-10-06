@@ -98,66 +98,15 @@ void load_matrix_amino(std::istream* is,
     }
 }
 
-
-
-int main(int argc, char *argv[] )
+/*
+void get_cond_probs()
 {
-
-  if (argc != 5)
-    {
-      std::cout << "Proper usage: ./main fasta model1 model160 model161" << '\n';
-      return 0;
-    }
-  else
-    {
-      //std::string dir = "../data/";
-    }
-  
-  
-  
-  // read file, load transition matrix and close file
-  std::ifstream is(argv[1]);
-  std::vector< std::vector<double> > transition_matrix;
-  std::vector<double> stationary_prob;
-  int num_seq;
-  load_matrix_amino(&is, &transition_matrix, &stationary_prob, &num_seq);
-
-  is.close();
-
-  //print_transition_matrix(&transition_matrix);
-  //print_stationary_prob(&stationary_prob);
-  
-  StringSet<CharString> ids;
-  StringSet< String<AminoAcid> > seqs;
-
-  SeqFileIn seqFileIn("COG160.test.T1.fasta");
-  
-  try
-    {
-      readRecords(ids, seqs, seqFileIn);
-    }
-  catch (Exception const & e)
-    {
-      std::cout << "ERROR: " << e.what() << std::endl;
-      return 1;
-    }
-
-  // Character order in transition matrix and statinary probabillity
-  const char * amino_acid_sequence = {"IVLFCMAGTWSYPHEQDNKR"};
-
-  
-  
-  /* Likelihood computation */
-  // parameters
+  //parameters
   int idx_curr = 0;
   int idx_prev = 0;
   char current_char;
   char previous_char;
-  std::vector< std::vector<double> > probs;
   double prob;
-  
-  //std::cout << "Length ids: " << length(ids) << '\n';
-  //std::cout << "Length ids2: " << length(ids[0]) << '\n';
   
   for (int i = 0; i < length(seqs); i++)
     {
@@ -194,6 +143,125 @@ int main(int argc, char *argv[] )
 	}
   
     }
+}
+*/
+
+
+int main(int argc, char *argv[] )
+{
+
+  if (argc != 5)
+    {
+      std::cout << "Proper usage: ./main fasta model1 model160 model161" << '\n';
+      return 0;
+    }
+  else
+    {
+      //std::string dir = "../data/";
+    }
+  
+  
+  
+  // read file, load transition matrix and close file
+  std::ifstream is1(argv[2]);
+  std::ifstream is160(argv[3]);
+  std::ifstream is161(argv[4]);
+
+  std::vector< std::vector<double> > transition_matrix;
+  std::vector< std::vector<double> > transition_matrix160;
+  std::vector< std::vector<double> > transition_matrix161;
+  
+  std::vector<double> stationary_prob;
+  std::vector<double> stationary_prob160;
+  std::vector<double> stationary_prob161;
+
+  int num_seq;
+  int num_seq160;
+  int num_seq161;
+  
+  load_matrix_amino(&is1, &transition_matrix, &stationary_prob, &num_seq);
+  load_matrix_amino(&is160, &transition_matrix160, &stationary_prob160, &num_seq160);
+  load_matrix_amino(&is161, &transition_matrix161, &stationary_prob161, &num_seq161);
+
+  is1.close();
+  is160.close();
+  is161.close();
+
+  //print_transition_matrix(&transition_matrix1);
+  //print_stationary_prob(&stationary_prob1);
+  
+  StringSet<CharString> ids;
+  StringSet< String<AminoAcid> > seqs;
+
+  SeqFileIn seqFileIn(argv[1]);
+  
+  try
+    {
+      readRecords(ids, seqs, seqFileIn);
+    }
+  catch (Exception const & e)
+    {
+      std::cout << "ERROR: " << e.what() << std::endl;
+      return 1;
+    }
+
+  // Character order in transition matrix and statinary probabillity
+  const char * amino_acid_sequence = {"IVLFCMAGTWSYPHEQDNKR"};
+
+  
+  
+  /* Likelihood computation */
+  // parameters
+
+  
+  int idx_curr = 0;
+  int idx_prev = 0;
+  char current_char;
+  char previous_char;
+  std::vector< std::vector<double> > probs;
+  double prob;
+  
+
+  //std::cout << "Length ids: " << length(ids) << '\n';
+  //std::cout << "Length ids2: " << length(ids[0]) << '\n';
+  
+  
+  for (int i = 0; i < length(seqs); i++)
+    {
+      //std::cout << i << '\n';
+      // first value
+      probs.push_back(std::vector<double>());
+
+      current_char = seqs[i][0];
+      idx_curr = find_character_index(amino_acid_sequence, 
+				      sizeof(char)*AMINO_SIZE, current_char);
+
+      prob = stationary_prob.at(idx_curr);
+      probs[i].push_back(prob);
+
+      // all other values
+  
+      for (int j = 1; j < length(seqs[i]); j++)
+	{
+	  previous_char = current_char;
+	  idx_prev = idx_curr;
+	  current_char = seqs[i][j];
+	  idx_curr = find_character_index(amino_acid_sequence, 
+					  sizeof(char)*AMINO_SIZE, current_char);
+	  //std::cout << idx_prev << ", " << idx_curr << '\n';
+	  if (idx_curr < 0 || idx_prev < 0)
+	    {
+	      prob = 1;
+	    }
+	  else 
+	    {
+	      prob = transition_matrix[idx_prev][idx_curr];
+	    }
+	  probs[i].push_back(prob);
+	}
+  
+    }
+  
 
   // calculate the probabillity
   
