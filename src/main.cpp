@@ -98,8 +98,11 @@ void load_matrix_amino(std::istream* is,
     }
 }
 
-/*
-void get_cond_probs()
+void get_cond_probs(StringSet< String<AminoAcid> > seqs,
+		    std::vector< std::vector<double> > transition_matrix,
+		    std::vector<double> stationary_prob,
+		    const char * amino_acid_sequence,
+		    std::vector< std::vector<double> > & probs)
 {
   //parameters
   int idx_curr = 0;
@@ -110,7 +113,7 @@ void get_cond_probs()
   
   for (int i = 0; i < length(seqs); i++)
     {
-      //std::cout << i << '\n';
+
       // first value
       probs.push_back(std::vector<double>());
 
@@ -144,22 +147,61 @@ void get_cond_probs()
   
     }
 }
-*/
 
+void log_cond_probs(std::vector<double> & cond_prob, 
+		    std::vector< std::vector<double> > probs)
+{
+  
+  // log all conditional probabillities
+  double temp_sum;
+  
+  for (int i = 0; i < length(probs); i++)
+    {
+      temp_sum = 0;
+      for (int j = 0; j < length(probs[i]); j++)
+	{
+	  temp_sum = temp_sum + log10(probs[i][j]);
+	}
+      cond_prob.push_back(temp_sum);
+      //std::cout << temp_sum << '\n';
+    }
+}
+
+void calc_sequence_prob()
+{
+  
+}
+
+void print_result_to_file(std::vector<double> prob1,
+			  std::vector<double> prob160,
+			  std::vector<double> prob161,
+			  StringSet<CharString> ids,
+			  char *filename)
+{
+  std::ofstream out(filename);
+  
+  out << "ID" << '\t';
+  out << "COG1" << '\t' << "COG160" << '\t' << "COG161" << '\n';
+  
+  for (int i = 0; i < length(prob1); i++)
+    {
+      out << ids[i] << '\t';
+      out << prob1[i] << '\t' << prob160[i] << '\t' << prob161[i] << '\n';
+    }
+
+  out.close();
+}
 
 int main(int argc, char *argv[] )
 {
 
-  if (argc != 5)
+  if (argc != 6)
     {
-      std::cout << "Proper usage: ./main fasta model1 model160 model161" << '\n';
+      std::cout << "Proper usage: ./main fasta model1 model160 model161 output_file" << '\n';
       return 0;
     }
   else
-    {
-      //std::string dir = "../data/";
-    }
-  
+    { }
   
   
   // read file, load transition matrix and close file
@@ -209,92 +251,46 @@ int main(int argc, char *argv[] )
   const char * amino_acid_sequence = {"IVLFCMAGTWSYPHEQDNKR"};
 
   
-  
   /* Likelihood computation */
   // parameters
-
   
-  int idx_curr = 0;
-  int idx_prev = 0;
-  char current_char;
-  char previous_char;
   std::vector< std::vector<double> > probs;
-  double prob;
+  std::vector< std::vector<double> > probs160;
+  std::vector< std::vector<double> > probs161;
+
+  get_cond_probs(seqs, transition_matrix, stationary_prob,
+		 amino_acid_sequence, probs);
+  get_cond_probs(seqs, transition_matrix160, stationary_prob160,
+		 amino_acid_sequence, probs160);
+  get_cond_probs(seqs, transition_matrix161, stationary_prob161,
+		 amino_acid_sequence, probs161);
   
 
-  //std::cout << "Length ids: " << length(ids) << '\n';
-  //std::cout << "Length ids2: " << length(ids[0]) << '\n';
-  
-  
-  for (int i = 0; i < length(seqs); i++)
-    {
-      //std::cout << i << '\n';
-      // first value
-      probs.push_back(std::vector<double>());
-
-      current_char = seqs[i][0];
-      idx_curr = find_character_index(amino_acid_sequence, 
-				      sizeof(char)*AMINO_SIZE, current_char);
-
-      prob = stationary_prob.at(idx_curr);
-      probs[i].push_back(prob);
-
-      // all other values
-  
-      for (int j = 1; j < length(seqs[i]); j++)
-	{
-	  previous_char = current_char;
-	  idx_prev = idx_curr;
-	  current_char = seqs[i][j];
-	  idx_curr = find_character_index(amino_acid_sequence, 
-					  sizeof(char)*AMINO_SIZE, current_char);
-	  //std::cout << idx_prev << ", " << idx_curr << '\n';
-	  if (idx_curr < 0 || idx_prev < 0)
-	    {
-	      prob = 1;
-	    }
-	  else 
-	    {
-	      prob = transition_matrix[idx_prev][idx_curr];
-	    }
-	  probs[i].push_back(prob);
-	}
-  
-    }
-  
-
-  // calculate the probabillity
+  // calculate the log probabillity into cond_prob
   
   std::vector<double> cond_prob;
-  double temp_sum;
-  
-  for (int i = 0; i < length(probs); i++)
-    {
-      temp_sum = 0;
-      for (int j = 0; j < length(probs[i]); j++)
-	{
-	  temp_sum = temp_sum + log10(probs[i][j]);
-	}
-      cond_prob.push_back(temp_sum);
-      std::cout << temp_sum << '\n';
-    }
+  std::vector<double> cond_prob160;
+  std::vector<double> cond_prob161;
 
-  for (int i = 0; i < 34; i++)
-    {
-      //std::cout << ids[i] << '\t' << seqs[i] << '\n';
-    }
-  
+  log_cond_probs(cond_prob, probs);
+  log_cond_probs(cond_prob160, probs160);
+  log_cond_probs(cond_prob161, probs161);
 
-  std::cout << '\n';
+  // P(model)
+  double temp_sum = num_seq + num_seq160 + num_seq161;
+  double modP = num_seq / temp_sum;
+  double modP160 = num_seq160 / temp_sum;
+  double modP161 = num_seq161 / temp_sum;
+
+  // sum P(seq|model) * P(model) for every model
+  
+  calc_sequence_prob();
+
+  // print result file
+  print_result_to_file(cond_prob, cond_prob160, cond_prob161, ids, argv[5]);
+  
   std::cout << "End of program" << '\n';
 
   return 1;
 }
 
-
-/*
-std::cout << "dim1: " << length(transition_matrix[0]) << '\n';
-std::cout << "dim2: " << length(transition_matrix) << '\n';
-std::cout << "num_seq: " << num_seq << '\n';
-std::cout << transition_matrix[19][19] << '\n';
-*/
