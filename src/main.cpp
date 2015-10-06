@@ -100,12 +100,23 @@ void load_matrix_amino(std::istream* is,
 
 
 
-int main(int, char const **)
+int main(int argc, char *argv[] )
 {
-  // read file, load transition matrix and close file
-  std::ifstream is("../data/COG160.train.T1.model");
-  std::string line;
 
+  if (argc != 5)
+    {
+      std::cout << "Proper usage: ./main fasta model1 model160 model161" << '\n';
+      return 0;
+    }
+  else
+    {
+      //std::string dir = "../data/";
+    }
+  
+  
+  
+  // read file, load transition matrix and close file
+  std::ifstream is(argv[1]);
   std::vector< std::vector<double> > transition_matrix;
   std::vector<double> stationary_prob;
   int num_seq;
@@ -119,7 +130,7 @@ int main(int, char const **)
   StringSet<CharString> ids;
   StringSet< String<AminoAcid> > seqs;
 
-  SeqFileIn seqFileIn("../data/COG160.test.T1.fasta");
+  SeqFileIn seqFileIn("COG160.test.T1.fasta");
   
   try
     {
@@ -145,12 +156,12 @@ int main(int, char const **)
   std::vector< std::vector<double> > probs;
   double prob;
   
-  std::cout << "Length ids: " << length(ids) << '\n';
-  std::cout << "Length ids2: " << length(ids[0]) << '\n';
+  //std::cout << "Length ids: " << length(ids) << '\n';
+  //std::cout << "Length ids2: " << length(ids[0]) << '\n';
   
   for (int i = 0; i < length(seqs); i++)
     {
-      std::cout << i << '\n';
+      //std::cout << i << '\n';
       // first value
       probs.push_back(std::vector<double>());
 
@@ -170,10 +181,34 @@ int main(int, char const **)
 	  current_char = seqs[i][j];
 	  idx_curr = find_character_index(amino_acid_sequence, 
 					  sizeof(char)*AMINO_SIZE, current_char);
-	  prob = transition_matrix[i][j];
+	  //std::cout << idx_prev << ", " << idx_curr << '\n';
+	  if (idx_curr < 0 || idx_prev < 0)
+	    {
+	      prob = 1;
+	    }
+	  else 
+	    {
+	      prob = transition_matrix[idx_prev][idx_curr];
+	    }
 	  probs[i].push_back(prob);
 	}
   
+    }
+
+  // calculate the probabillity
+  
+  std::vector<double> cond_prob;
+  double temp_sum;
+  
+  for (int i = 0; i < length(probs); i++)
+    {
+      temp_sum = 0;
+      for (int j = 0; j < length(probs[i]); j++)
+	{
+	  temp_sum = temp_sum + log10(probs[i][j]);
+	}
+      cond_prob.push_back(temp_sum);
+      std::cout << temp_sum << '\n';
     }
 
   for (int i = 0; i < 34; i++)
