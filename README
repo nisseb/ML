@@ -1,2 +1,2 @@
 Example command for running src/main:
-./main COG1.test.T1.fasta COG1.train.T1.model COG160.train.T1.model COG161.train.T1.model
+./main COG1.test.T1.fasta COG1.train.T1.model COG160.train.T1.model COG161.train.T1.model testfile
