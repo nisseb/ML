@@ -1,6 +1,13 @@
 CC=g++
-CFLAGS=-I
-IDIR=/home/nils/Development/seqan-src/include/
+#CFLAGS=-g -Wall
+INCLUDES=-I /home/nils/Development/seqan-src/include/
 
-mainmake: main.o
-	$(CC) -o main main.o $(CFLAGS) $(IDIR)
+TARGET=main
+
+all: $(TARGET)
+
+$(TARGET): $(TARGET).cpp
+	$(CC) $(CFLAGS) $(INCLUDES) -o $(TARGET) $(TARGET).cpp
+
+clean:
+	$(RM) $(TARGET)
