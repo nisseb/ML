@@ -170,11 +170,6 @@ void log_cond_probs(std::vector<double> & cond_prob,
     }
 }
 
-void calc_sequence_prob()
-{
-  
-}
-
 void print_result_to_file(double * prob1,
 			  double * prob160,
 			  double * prob161,
@@ -182,19 +177,15 @@ void print_result_to_file(double * prob1,
 			  char *filename,
 			  int length)
 {
-  //std::ofstream out(filename);
   FILE *fp = fopen(filename, "w");
-  
+
   fprintf(fp, "ID\tCOG1\tCOG160\tCOG161\n");
-  
-  
   for (int i = 0; i < length; i++)
     {
       fprintf(fp, "SEQ %d \t", i);
       fprintf(fp, "%.4f \t %.4f \t %.4f\n", prob1[i], prob160[i], prob161[i]);
     }
 
-  //out.close();
   fclose(fp);
 }
 
@@ -260,6 +251,7 @@ void final_calc(mpf_t *cond_prob_mpf, mpf_t *cond_prob_mpf160, mpf_t *cond_prob_
     {
       /* upper */
       mpf_mul(temp_u, specific_prob[i], specific_pModel);
+      
       /* lower */
       
       // mult
@@ -299,7 +291,6 @@ void log_probs(double * res, int length)
     }
 }
 
-
 void clear_data(mpf_t * cond_prob_data, int length)
 {
   for (int i = 0; i < length; i++)
@@ -307,8 +298,6 @@ void clear_data(mpf_t * cond_prob_data, int length)
       mpf_clear(cond_prob_data[i]);
     }
 }
-
-
 
 
 int main(int argc, char *argv[] )
@@ -365,9 +354,7 @@ int main(int argc, char *argv[] )
   const char * amino_acid_sequence = {"IVLFCMAGTWSYPHEQDNKR"};
 
   
-  /* Likelihood computation using gmp */
-
-  // parameters
+  /* Get conditional probabilities in the sequences */
   std::vector< std::vector<double> > probs;
   std::vector< std::vector<double> > probs160;
   std::vector< std::vector<double> > probs161;
@@ -378,32 +365,16 @@ int main(int argc, char *argv[] )
 		 amino_acid_sequence, probs160);
   get_cond_probs(seqs, transition_matrix161, stationary_prob161,
 		 amino_acid_sequence, probs161);
-  
 
-  // calculate the log probabillity into cond_prob
-  
-  std::vector<double> cond_prob;
-  std::vector<double> cond_prob160;
-  std::vector<double> cond_prob161;
-
-  log_cond_probs(cond_prob, probs);
-  log_cond_probs(cond_prob160, probs160);
-  log_cond_probs(cond_prob161, probs161);
-
-  // P(model)
+  /* P(model) */
   double temp_sum = num_seq + num_seq160 + num_seq161;
   double modP = num_seq / temp_sum;
   double modP160 = num_seq160 / temp_sum;
   double modP161 = num_seq161 / temp_sum;
 
-  // sum P(seq|model) * P(model) for every model
-  
-  calc_sequence_prob();
+  /* Calculation, statr using gmp library */
 
-  /* Full calculation with gmp library */
-  
-  // Initiate variables and allocate
-
+  /* Initialize varibles */
   mpf_t *cond_prob_mpf;
   mpf_t *cond_prob_mpf160;
   mpf_t *cond_prob_mpf161;
@@ -420,6 +391,7 @@ int main(int argc, char *argv[] )
   final_prob160 = new mpf_t[probs160.size()];
   final_prob161 = new mpf_t[probs161.size()];
   
+  /* Transfer data from regular double to mpf (GMP library) */
   mpf_t pModel, pModel160, pModel161;
   mpf_init(pModel);
   mpf_init(pModel160);
@@ -429,12 +401,12 @@ int main(int argc, char *argv[] )
   mpf_set_d(pModel160, modP160);
   mpf_set_d(pModel161, modP161);
 
-  // get p(sequence|model)
+  /* get p(sequence|model) */
   get_cond_prob_mpf(cond_prob_mpf, probs);
   get_cond_prob_mpf(cond_prob_mpf160, probs160);
   get_cond_prob_mpf(cond_prob_mpf161, probs161);
     
-  // calculate p(model|sequence)
+  /* calculate p(model|sequence) */
   final_calc(cond_prob_mpf, cond_prob_mpf160, cond_prob_mpf161,
 	     final_prob, cond_prob_mpf, pModel, probs.size(),
 	     pModel, pModel160, pModel161);
@@ -453,7 +425,8 @@ int main(int argc, char *argv[] )
   res = new double[probs.size()];
   res160 = new double[probs160.size()];
   res161 = new double[probs161.size()];
-  
+
+  /* Transfer back to double */
   get_doubles(res, final_prob, probs.size());
   get_doubles(res160, final_prob160, probs160.size());
   get_doubles(res161, final_prob161, probs161.size());
@@ -465,6 +438,7 @@ int main(int argc, char *argv[] )
     }
   */
 
+  /* get log(probabilities) */
   log_probs(res, probs.size());
   log_probs(res160, probs160.size());
   log_probs(res161, probs161.size());
