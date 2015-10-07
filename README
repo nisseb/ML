@@ -1,2 +1,32 @@
-Example command for running src/main:
-./main COG1.test.T1.fasta COG1.train.T1.model COG160.train.T1.model COG161.train.T1.model testfile
+README hw1 2015-82599 Nils Bäckström
+
+### SYSTEM & COMPILER ###
+OS: Ubuntu 14.04
+CC: g++
+
+To compile using make, set:
+INCLUDES=-I ../seqan-src/include	#absolute adress to include folder
+
+and make sure to have library for GMP:
+sudo apt-get install libgmp3-dev	#
+
+### Execution ###
+Example command for running src/main while in folder src:
+
+#T1
+./ML-2015-82599-posterior COG1.test.T1.fasta COG1.train.T1.model COG160.train.T1.model COG161.train.T1.model COG1.test.T1.vs.COG1.COG160.COG161.posterior
+
+./ML-2015-82599-posterior COG160.test.T1.fasta COG1.train.T1.model COG160.train.T1.model COG161.train.T1.model COG160.test.T1.vs.COG1.COG160.COG161.posterior
+
+./ML-2015-82599-posterior COG161.test.T1.fasta COG1.train.T1.model COG160.train.T1.model COG161.train.T1.model COG161.test.T1.vs.COG1.COG160.COG161.posterior
+
+
+#T2
+./ML-2015-82599-posterior COG1.test.T2.fasta COG1.train.T2.model COG160.train.T2.model COG161.train.T2.model COG1.test.T2.vs.COG1.COG160.COG161.posterior
+
+./ML-2015-82599-posterior COG160.test.T2.fasta COG1.train.T2.model COG160.train.T2.model COG161.train.T2.model COG160.test.T2.vs.COG1.COG160.COG161.posterior
+
+./ML-2015-82599-posterior COG161.test.T2.fasta COG1.train.T2.model COG160.train.T2.model COG161.train.T2.model COG161.test.T2.vs.COG1.COG160.COG161.posterior
+
+### COMMENT ###
+So the fasta files sometimes contained character X which did not have a specified transition probability to or from. My implementation ignored those by setting transition probability to and from equal to 1.
