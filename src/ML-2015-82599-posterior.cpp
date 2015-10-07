@@ -4,6 +4,8 @@
 #include <seqan/stream.h>    // to stream a CharString into cout
 #include <seqan/seq_io.h>
 #include <algorithm>
+#include <gmp.h>
+
 
 #define AMINO_SIZE 20
 
@@ -191,6 +193,41 @@ void print_result_to_file(std::vector<double> prob1,
 
   out.close();
 }
+void get_cond_prob_mpf(mpf_t * cond_prob_mpf, 
+		    std::vector< std::vector<double> > probs)
+{
+  
+  mpf_t a, b;
+  mpf_init(a);
+  mpf_init(b);
+  
+  for (int i = 0; i < probs.size(); i++)
+    {
+  
+      mpf_set_d(b,1);
+      for (int j = 0; j < probs[i].size(); j++)
+	{
+	  mpf_set_d(a, probs[i][j]);
+	  mpf_mul(b,b,a);
+	}
+
+      mpf_init(cond_prob_mpf[i]);
+      mpf_set(cond_prob_mpf[i],b);
+    }
+
+  mpf_clear(a);
+  mpf_clear(b);
+}
+
+
+void clear_data(mpf_t * cond_prob_data, int length)
+{
+  for (int i = 0; i < length; i++)
+    {
+      mpf_clear(cond_prob_data[i]);
+    }
+}
+
 
 int main(int argc, char *argv[] )
 {
@@ -202,7 +239,7 @@ int main(int argc, char *argv[] )
     }
   else
     { }
-  
+
   
   // read file, load transition matrix and close file
   std::ifstream is1(argv[2]);
@@ -286,11 +323,43 @@ int main(int argc, char *argv[] )
   
   calc_sequence_prob();
 
+  /* Full calculation with gmp library */
+  
+  // allocate variables for conditional probabillity
+  mpf_t *cond_prob_mpf;
+  mpf_t *cond_prob_mpf160;
+  mpf_t *cond_prob_mpf161;
+  
+  cond_prob_mpf = new mpf_t[probs.size()];
+  cond_prob_mpf160 = new mpf_t[probs160.size()];
+  cond_prob_mpf161 = new mpf_t[probs161.size()];
+
+  // get p(sequence|model)
+  get_cond_prob_mpf(cond_prob_mpf, probs);
+  get_cond_prob_mpf(cond_prob_mpf160, probs160);
+  get_cond_prob_mpf(cond_prob_mpf161, probs161);
+    
+  // calculate p(model|sequence)
+  mpf_t pModel, pModel160, pModel161;
+  mpf_init(pModel);
+  mpf_init(pModel160);
+  mpf_init(pModel161);
+
   // print result file
+  //std::cout << "Printing... " << '\n';
   print_result_to_file(cond_prob, cond_prob160, cond_prob161, ids, argv[5]);
   
+  // clean up allocated data (mpf and new)
+  
+  clear_data(cond_prob_mpf, probs.size());
+  clear_data(cond_prob_mpf160, probs160.size());
+  clear_data(cond_prob_mpf161, probs161.size()); 
+  
+  delete [] cond_prob_mpf;
+  delete [] cond_prob_mpf160;
+  delete [] cond_prob_mpf161;
+  
   std::cout << "End of program" << '\n';
-
   return 1;
 }
 
