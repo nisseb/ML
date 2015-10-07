@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <stdio.h>
 #include <seqan/sequence.h>  // CharString, ...
 #include <seqan/stream.h>    // to stream a CharString into cout
 #include <seqan/seq_io.h>
@@ -174,24 +175,27 @@ void calc_sequence_prob()
   
 }
 
-void print_result_to_file(std::vector<double> prob1,
-			  std::vector<double> prob160,
-			  std::vector<double> prob161,
+void print_result_to_file(double * prob1,
+			  double * prob160,
+			  double * prob161,
 			  StringSet<CharString> ids,
-			  char *filename)
+			  char *filename,
+			  int length)
 {
-  std::ofstream out(filename);
+  //std::ofstream out(filename);
+  FILE *fp = fopen(filename, "w");
   
-  out << "ID" << '\t';
-  out << "COG1" << '\t' << "COG160" << '\t' << "COG161" << '\n';
+  fprintf(fp, "ID\tCOG1\tCOG160\tCOG161\n");
   
-  for (int i = 0; i < length(prob1); i++)
+  
+  for (int i = 0; i < length; i++)
     {
-      out << ids[i] << '\t';
-      out << prob1[i] << '\t' << prob160[i] << '\t' << prob161[i] << '\n';
+      fprintf(fp, "SEQ %d \t", i);
+      fprintf(fp, "%.4f \t %.4f \t %.4f\n", prob1[i], prob160[i], prob161[i]);
     }
 
-  out.close();
+  //out.close();
+  fclose(fp);
 }
 
 void print_result_to_file_gmp(mpf_t * prob1,
@@ -279,6 +283,22 @@ void final_calc(mpf_t *cond_prob_mpf, mpf_t *cond_prob_mpf160, mpf_t *cond_prob_
   mpf_clear(temp_lmul161);
 }
 
+void get_doubles(double * res, mpf_t * vals, int length)
+{
+  for (int i = 0; i < length; i++)
+    {
+      res[i] = mpf_get_d(vals[i]);
+    }
+}
+
+void log_probs(double * res, int length)
+{
+  for (int i = 0; i < length; i++)
+    {
+      res[i] = log10(res[i]);
+    }
+}
+
 
 void clear_data(mpf_t * cond_prob_data, int length)
 {
@@ -299,11 +319,8 @@ int main(int argc, char *argv[] )
       std::cout << "Proper usage: ./main fasta model1 model160 model161 output_file" << '\n';
       return 0;
     }
-  else
-    { }
 
-  
-  // read file, load transition matrix and close file
+  /* load transition matrix and sequence count */
   std::ifstream is1(argv[2]);
   std::ifstream is160(argv[3]);
   std::ifstream is161(argv[4]);
@@ -328,9 +345,7 @@ int main(int argc, char *argv[] )
   is160.close();
   is161.close();
 
-  //print_transition_matrix(&transition_matrix1);
-  //print_stationary_prob(&stationary_prob1);
-  
+  /* Read amino sequences from file */
   StringSet<CharString> ids;
   StringSet< String<AminoAcid> > seqs;
 
@@ -346,7 +361,7 @@ int main(int argc, char *argv[] )
       return 1;
     }
 
-  // Character order in transition matrix and statinary probabillity
+  /* Character order in transition matrix and statinary probabillity */
   const char * amino_acid_sequence = {"IVLFCMAGTWSYPHEQDNKR"};
 
   
@@ -431,23 +446,44 @@ int main(int argc, char *argv[] )
 	     pModel, pModel160, pModel161);
 
   
+  double *res;
+  double *res160;
+  double *res161;
+
+  res = new double[probs.size()];
+  res160 = new double[probs160.size()];
+  res161 = new double[probs161.size()];
   
-  std::cout << "Final calc done!" << std::endl;
-  std::cout << "Results are: " << std::endl;
+  get_doubles(res, final_prob, probs.size());
+  get_doubles(res160, final_prob160, probs160.size());
+  get_doubles(res161, final_prob161, probs161.size());
+
+  /* Test
+  for (int i = 0; i < probs.size(); i++)
+    {
+      std::cout << i << ": " << res[i] << std::endl;
+    }
+  */
+
+  log_probs(res, probs.size());
+  log_probs(res160, probs160.size());
+  log_probs(res161, probs161.size());
+
+  /* Test
+  for (int i = 0; i < probs.size(); i++)
+    {
+      std::cout << i << ": " << res[i] << std::endl;
+    }
+  */
   
-  print_result_to_file_gmp(final_prob,
-			   final_prob160,
-			   final_prob161,
-			   ids,
-			   argv[5],
-			   probs.size());
+  /* Printing */
+  // gmp, not log scale
+  //print_result_to_file_gmp(final_prob, final_prob160, final_prob161, ids, argv[5], probs.size());
   
-  // print result file
-  //std::cout << "Printing... " << '\n';
-  //print_result_to_file(cond_prob, cond_prob160, cond_prob161, ids, argv[5]);
+  // log scale
+  print_result_to_file(res, res160, res161, ids, argv[5], probs.size());
   
-  // clean up allocated data (mpf and new)
-  
+  /* Clean up */
   clear_data(cond_prob_mpf, probs.size());
   clear_data(cond_prob_mpf160, probs160.size());
   clear_data(cond_prob_mpf161, probs161.size()); 
@@ -463,7 +499,11 @@ int main(int argc, char *argv[] )
   delete [] final_prob;
   delete [] final_prob160;
   delete [] final_prob161;
-  
+
+  delete [] res;
+  delete [] res160;
+  delete [] res161;
+
   std::cout << "End of program" << '\n';
   return 1;
 }
