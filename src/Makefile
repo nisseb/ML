@@ -2,7 +2,7 @@ CC=g++
 #CFLAGS=-g -Wall
 INCLUDES=-I /home/nils/Development/seqan-src/include/
 
-TARGET=main
+TARGET=ML-2015-82599-posterior
 
 all: $(TARGET)
 
