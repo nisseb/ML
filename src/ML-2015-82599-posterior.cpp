@@ -193,6 +193,28 @@ void print_result_to_file(std::vector<double> prob1,
 
   out.close();
 }
+
+void print_result_to_file_gmp(mpf_t * prob1,
+			      mpf_t * prob160,
+			      mpf_t * prob161,
+			      StringSet<CharString> ids,
+			      char *filename,
+			      int length)
+{
+  std::ofstream out(filename);
+  
+  out << "ID" << '\t';
+  out << "COG1" << '\t' << "COG160" << '\t' << "COG161" << '\n';
+  
+  for (int i = 0; i < length; i++)
+    {
+      out << ids[i] << '\t';
+      out << prob1[i] << '\t' << prob160[i] << '\t' << prob161[i] << '\n';
+    }
+
+  out.close();
+}
+
 void get_cond_prob_mpf(mpf_t * cond_prob_mpf, 
 		    std::vector< std::vector<double> > probs)
 {
@@ -219,6 +241,44 @@ void get_cond_prob_mpf(mpf_t * cond_prob_mpf,
   mpf_clear(b);
 }
 
+void final_calc(mpf_t *cond_prob_mpf, mpf_t *cond_prob_mpf160, mpf_t *cond_prob_mpf161,
+		mpf_t *final_prob, mpf_t *specific_prob, mpf_t specific_pModel, int length,
+		mpf_t pModel, mpf_t pModel160, mpf_t pModel161)
+{
+  mpf_t temp_u, temp_l, temp_lmul, temp_lmul160, temp_lmul161;
+  mpf_init(temp_u);
+  mpf_init(temp_l);
+  mpf_init(temp_lmul);  
+  mpf_init(temp_lmul160);
+  mpf_init(temp_lmul161);
+  
+  for (int i = 0; i < length; i++)
+    {
+      /* upper */
+      mpf_mul(temp_u, specific_prob[i], specific_pModel);
+      /* lower */
+      
+      // mult
+      mpf_mul(temp_lmul, cond_prob_mpf[i], pModel);
+      mpf_mul(temp_lmul160, cond_prob_mpf160[i], pModel160);
+      mpf_mul(temp_lmul161, cond_prob_mpf161[i], pModel161);
+      
+      // add
+      mpf_add(temp_l, temp_lmul160, temp_lmul161);
+      mpf_add(temp_l, temp_l, temp_lmul);
+      
+      // upper / lower
+      mpf_init(final_prob[i]);
+      mpf_div(final_prob[i], temp_u, temp_l);
+    }
+  
+  mpf_clear(temp_u);
+  mpf_clear(temp_l);
+  mpf_clear(temp_lmul);
+  mpf_clear(temp_lmul160);
+  mpf_clear(temp_lmul161);
+}
+
 
 void clear_data(mpf_t * cond_prob_data, int length)
 {
@@ -227,6 +287,8 @@ void clear_data(mpf_t * cond_prob_data, int length)
       mpf_clear(cond_prob_data[i]);
     }
 }
+
+
 
 
 int main(int argc, char *argv[] )
@@ -288,13 +350,13 @@ int main(int argc, char *argv[] )
   const char * amino_acid_sequence = {"IVLFCMAGTWSYPHEQDNKR"};
 
   
-  /* Likelihood computation */
+  /* Likelihood computation using gmp */
+
   // parameters
-  
   std::vector< std::vector<double> > probs;
   std::vector< std::vector<double> > probs160;
   std::vector< std::vector<double> > probs161;
-
+  
   get_cond_probs(seqs, transition_matrix, stationary_prob,
 		 amino_acid_sequence, probs);
   get_cond_probs(seqs, transition_matrix160, stationary_prob160,
@@ -325,7 +387,8 @@ int main(int argc, char *argv[] )
 
   /* Full calculation with gmp library */
   
-  // allocate variables for conditional probabillity
+  // Initiate variables and allocate
+
   mpf_t *cond_prob_mpf;
   mpf_t *cond_prob_mpf160;
   mpf_t *cond_prob_mpf161;
@@ -334,30 +397,72 @@ int main(int argc, char *argv[] )
   cond_prob_mpf160 = new mpf_t[probs160.size()];
   cond_prob_mpf161 = new mpf_t[probs161.size()];
 
+  mpf_t *final_prob;
+  mpf_t *final_prob160;
+  mpf_t *final_prob161;
+  
+  final_prob = new mpf_t[probs.size()];
+  final_prob160 = new mpf_t[probs160.size()];
+  final_prob161 = new mpf_t[probs161.size()];
+  
+  mpf_t pModel, pModel160, pModel161;
+  mpf_init(pModel);
+  mpf_init(pModel160);
+  mpf_init(pModel161);
+
+  mpf_set_d(pModel, modP);
+  mpf_set_d(pModel160, modP160);
+  mpf_set_d(pModel161, modP161);
+
   // get p(sequence|model)
   get_cond_prob_mpf(cond_prob_mpf, probs);
   get_cond_prob_mpf(cond_prob_mpf160, probs160);
   get_cond_prob_mpf(cond_prob_mpf161, probs161);
     
   // calculate p(model|sequence)
-  mpf_t pModel, pModel160, pModel161;
-  mpf_init(pModel);
-  mpf_init(pModel160);
-  mpf_init(pModel161);
+  final_calc(cond_prob_mpf, cond_prob_mpf160, cond_prob_mpf161,
+	     final_prob, cond_prob_mpf, pModel, probs.size(),
+	     pModel, pModel160, pModel161);
+  final_calc(cond_prob_mpf, cond_prob_mpf160, cond_prob_mpf161,
+	     final_prob160, cond_prob_mpf160, pModel160, probs160.size(),
+	     pModel, pModel160, pModel161);
+  final_calc(cond_prob_mpf, cond_prob_mpf160, cond_prob_mpf161,
+	     final_prob161, cond_prob_mpf161, pModel161, probs161.size(),
+	     pModel, pModel160, pModel161);
 
+  
+  
+  std::cout << "Final calc done!" << std::endl;
+  std::cout << "Results are: " << std::endl;
+  
+  print_result_to_file_gmp(final_prob,
+			   final_prob160,
+			   final_prob161,
+			   ids,
+			   argv[5],
+			   probs.size());
+  
   // print result file
   //std::cout << "Printing... " << '\n';
-  print_result_to_file(cond_prob, cond_prob160, cond_prob161, ids, argv[5]);
+  //print_result_to_file(cond_prob, cond_prob160, cond_prob161, ids, argv[5]);
   
   // clean up allocated data (mpf and new)
   
   clear_data(cond_prob_mpf, probs.size());
   clear_data(cond_prob_mpf160, probs160.size());
   clear_data(cond_prob_mpf161, probs161.size()); 
+
+  clear_data(final_prob, probs.size());
+  clear_data(final_prob160, probs160.size());
+  clear_data(final_prob161, probs161.size());
   
   delete [] cond_prob_mpf;
   delete [] cond_prob_mpf160;
   delete [] cond_prob_mpf161;
+
+  delete [] final_prob;
+  delete [] final_prob160;
+  delete [] final_prob161;
   
   std::cout << "End of program" << '\n';
   return 1;
