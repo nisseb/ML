@@ -129,7 +129,7 @@ void get_cond_probs(StringSet< String<AminoAcid> > seqs,
       while (idx_curr < 0)
       {
           prob = 1;
-	  probs[k].push_back(prob);
+	  probs[i].push_back(prob);
           
           k = k + 1;
           current_char = seqs[i][k];
