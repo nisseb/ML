@@ -119,25 +119,47 @@ void get_cond_probs(StringSet< String<AminoAcid> > seqs,
 
       // first value
       probs.push_back(std::vector<double>());
-
-      current_char = seqs[i][0];
+      
+      int k = 0;
+      current_char = seqs[i][k];
       idx_curr = find_character_index(amino_acid_sequence, 
 				      sizeof(char)*AMINO_SIZE, current_char);
 
+      // make sure first character exists in the seqence
+      while (idx_curr < 0)
+      {
+          prob = 1;
+	  probs[k].push_back(prob);
+          
+          k = k + 1;
+          current_char = seqs[i][k];
+	  idx_curr = find_character_index(amino_acid_sequence, 
+				sizeof(char)*AMINO_SIZE, current_char);
+	}
+      
+      // add first valid character
       prob = stationary_prob.at(idx_curr);
       probs[i].push_back(prob);
+      k = k + 1;
 
       // all other values
   
-      for (int j = 1; j < length(seqs[i]); j++)
+      for (int j = k; j < length(seqs[i]); j++)
 	{
-	  previous_char = current_char;
-	  idx_prev = idx_curr;
+	  
+	  // only update if last character was valid
+	  if (idx_curr >= 0)
+	    {
+	      idx_prev = idx_curr;
+	    }
+	  
+	  // get current character
 	  current_char = seqs[i][j];
 	  idx_curr = find_character_index(amino_acid_sequence, 
 					  sizeof(char)*AMINO_SIZE, current_char);
-	  //std::cout << idx_prev << ", " << idx_curr << '\n';
-	  if (idx_curr < 0 || idx_prev < 0)
+
+	  // get transitionmatrix prob if character is valid, ignore otherwise
+	  if (idx_curr < 0)
 	    {
 	      prob = 1;
 	    }
@@ -183,7 +205,7 @@ void print_result_to_file(double * prob1,
   for (int i = 0; i < length; i++)
     {
       fprintf(fp, "SEQ %d \t", i);
-      fprintf(fp, "%.4f \t %.4f \t %.4f\n", prob1[i], prob160[i], prob161[i]);
+      fprintf(fp, "%.6f \t %.6f \t %.6f\n", prob1[i], prob160[i], prob161[i]);
     }
 
   fclose(fp);
